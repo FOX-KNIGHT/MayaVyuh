@@ -14,3 +14,13 @@ services:
         sync: false
       - key: AI_SERVICE_URL
         sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_REGION
+        value: "eu-north-1"
+      - key: HF_TOKEN
+        sync: false
+      - key: AWS_S3_Bucket_name
+        value: "mayavyuh-images-4827-131404648287-eu-north-1-an"

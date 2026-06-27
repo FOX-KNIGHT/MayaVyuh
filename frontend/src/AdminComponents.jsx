@@ -11,6 +11,8 @@ import bg5 from "./assets/bg-5.jpg";
 
 export const BG_IMAGES = [bg1, bg2, bg3, bg4, bg5];
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
+
 export const GlobalStyles = () => (
   <style>{`
     @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
@@ -713,7 +715,7 @@ export const AdminDashboard = ({ teams, setTeams, eventState, setEventState }) =
 
   const seedDatabase = () => alert("IMPERIAL PROTOCOL: SEED_DB triggered!");
 
-  const sortedTeams = [...teams].filter(t => t.score !== undefined && t.score !== null).sort((a,b) => b.score - a.score);
+  const sortedTeams = [...teams];
   const status = session?.status || 'waiting';
   const fmtTime = (s) => `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
   const isLive = status.includes('active');
@@ -826,7 +828,7 @@ export const AdminDashboard = ({ teams, setTeams, eventState, setEventState }) =
                       <div style={{ fontSize: 14, color: i === 0 ? "#D4AF37" : "#fff", letterSpacing: 2 }}>{t.name}</div>
                       <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", letterSpacing: 1, marginTop: 4 }}>P1:{t.player1} | P2:{t.player2}</div>
                     </div>
-                    <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 18, color: i === 0 ? "#D4AF37" : "#fff" }}>{t.score}</div>
+                    <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 12, color: i === 0 ? "#D4AF37" : "rgba(255,255,255,0.5)" }}>R{t.round || 0}</div>
                   </div>
                 ))}
                 {sortedTeams.length === 0 && <div style={{ color: "#718096", textAlign: "center", padding: 40, letterSpacing: 2, fontSize: 12 }}>NO SIGNALS DETECTED</div>}
