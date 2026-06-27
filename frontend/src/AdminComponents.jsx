@@ -607,7 +607,10 @@ const ImageVaultSection = () => {
       await fetch("https://mayavyuh.onrender.com/api/admin/upload-image", { method: "POST", body: formData });
       fetchImages();
     } catch (err) { console.error(err); } 
-    finally { setLoading(false); }
+    finally { 
+      setLoading(false);
+      e.target.value = null;
+    }
   };
 
   const handleDelete = async (id) => {
