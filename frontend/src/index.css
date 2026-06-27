@@ -73,3 +73,27 @@ img {
   background: rgba(200, 146, 10, 0.25);
   color: #f5b800;
 }
+
+/* ANTI CHEAT */
+body {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+img {
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  pointer-events: none; /* Prevents right click and long press */
+}
+
+input, textarea {
+  user-select: auto;
+  -webkit-user-select: auto;
+  -moz-user-select: auto;
+  -ms-user-select: auto;
+  pointer-events: auto;
+}
