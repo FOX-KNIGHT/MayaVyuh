@@ -3,6 +3,8 @@ const dns = require('dns');
 // Set DNS servers to Google's public DNS to resolve MongoDB Atlas SRV records reliably
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const { v4: uuidv4 } = require('uuid');
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -12,31 +14,28 @@ const { OpenAI } = require('openai');
 
 const KeyValue = require('./models/KeyValue');
 const ImageBank = require('./models/ImageBank');
+const Submission = require('./models/Submission');
+const Team = require('./models/Team');
 
 const app = express();
+
+const s3 = new S3Client({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+
+  },
+});
+
 app.use(cors());
 app.use(express.json());
 
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir);
-}
-
-app.use('/uploads', express.static(uploadsDir));
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + '-' + file.originalname);
-  }
+const upload = multer({
+  storage: multer.memoryStorage(),
 });
-const upload = multer({ storage });
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -58,9 +57,102 @@ mongoose.connect(process.env.MONGO_URI)
   })
   .catch(err => console.log("MongoDB Connection Error:", err));
 
-app.post('/api/upload', upload.single('image'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: "No file uploaded" });
-  res.json({ url: `/uploads/${req.file.filename}` });
+app.post('/api/admin/upload-image', upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "No file uploaded" });
+    }
+
+    const fileContent = req.file.buffer;
+    const extension = req.file.originalname.split('.').pop().replace(/[^a-zA-Z0-9]/g, '');
+    const key = `reference/${uuidv4()}.${extension}`;
+
+    const command = new PutObjectCommand({
+      Bucket: process.env.AWS_S3_BUCKET_NAME,
+      Key: key,
+      Body: fileContent,
+      ContentType: req.file.mimetype,
+    });
+
+    await s3.send(command);
+
+    const fullUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+
+    const newImage = new ImageBank({
+      url: fullUrl,
+    });
+    await newImage.save();
+
+    res.json({
+      success: true,
+      url: fullUrl
+    });
+
+  } catch (err) {
+    console.error("Admin S3 Upload Error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to upload image to S3",
+      error: err.message,
+    });
+  }
+});
+
+app.post('/api/player/upload-submission', upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "No file uploaded" });
+    }
+
+    const { teamId, round } = req.body;
+    if (!teamId || !round) {
+      return res.status(400).json({ success: false, message: "teamId and round are required" });
+    }
+
+    const team = await Team.findById(teamId);
+    if (!team) {
+        return res.status(404).json({
+            success: false,
+            message: "Team not found"
+        });
+    }
+
+    const fileContent = req.file.buffer;
+    const extension = req.file.originalname.split('.').pop().replace(/[^a-zA-Z0-9]/g, '');
+    const key = `submissions/${teamId}/${round}/${uuidv4()}.${extension}`;
+
+    const command = new PutObjectCommand({
+      Bucket: process.env.AWS_S3_BUCKET_NAME,
+      Key: key,
+      Body: fileContent,
+      ContentType: req.file.mimetype,
+    });
+
+    await s3.send(command);
+
+    const fullUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+
+    const newSubmission = new Submission({
+      team: teamId,
+      round: round,
+      finalImageUrl: fullUrl,
+    });
+
+    await newSubmission.save();
+
+    res.json({
+      success: true,
+      url: fullUrl
+    });
+
+  } catch (err) {
+    console.error("Player S3 Upload Error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to upload image to S3",
+      error: err.message,
+    });
+  }
 });
 
 const apiRoutes = require('./routes/api');
@@ -88,11 +180,12 @@ app.get('/api/target-image', async (req, res) => {
     if (images.length === 0) {
       return res.json({ url: 'https://picsum.photos/seed/default/800/800' });
     }
-    const url = images[currentTargetIndex % images.length].url;
+    const storedUrl = images[currentTargetIndex % images.length].url;
     currentTargetIndex = (currentTargetIndex + 1) % images.length;
-    res.json({ url });
-  } catch(err) {
-    res.status(500).json({ error: "Failed to fetch image" });
+    
+    res.json({ url: storedUrl });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Failed to fetch image", error: err.message });
   }
 });
 
@@ -101,7 +194,7 @@ app.get('/api/admin/images', async (req, res) => {
     const images = await ImageBank.find();
     res.json(images);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ success: false, message: "Failed to fetch images", error: err.message });
   }
 });
 
@@ -129,9 +222,9 @@ app.post('/api/similarity', async (req, res) => {
   try {
     const { original_url, submitted_url } = req.body;
     const response = await fetch('http://localhost:8000/api/similarity', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ original_url, submitted_url })
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ original_url, submitted_url })
     });
     if (!response.ok) {
       throw new Error(`AI service returned status: ${response.status}`);
@@ -148,7 +241,7 @@ app.post('/api/generate', async (req, res) => {
   try {
     const { prompt } = req.body;
     if (!prompt) return res.status(400).json({ error: "Prompt is required" });
-    
+
     if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'your_openai_api_key_here') {
       const response = await openai.images.generate({
         model: "dall-e-3",
@@ -158,7 +251,7 @@ app.post('/api/generate', async (req, res) => {
       });
       return res.json({ images: [response.data[0].url] });
     }
-    
+
     // Fallback since API key might be missing/invalid
     const seed = Date.now();
     const images = [`https://picsum.photos/seed/${seed}/1024/1024`];
@@ -254,7 +347,7 @@ io.on('connection', async (socket) => {
       initialState[item.key] = item.value;
     });
     socket.emit('initialData', initialState);
-  } catch(e) {
+  } catch (e) {
     console.log("Error fetching KeyValue on connection:", e.message);
   }
 
@@ -268,7 +361,7 @@ io.on('connection', async (socket) => {
   socket.on('anti_cheat_violation', async (data) => {
     // data = { teamId, type: 'tab_switch' | 'fullscreen_exit' }
     const Team = require('./models/Team');
-    if(data.teamId) {
+    if (data.teamId) {
       const update = data.type === 'tab_switch' ? { $inc: { tabSwitchCount: 1, warnings: 1 } } : { $inc: { fullscreenExits: 1, warnings: 1 } };
       await Team.findByIdAndUpdate(data.teamId, update);
       io.emit('admin_alert', { teamId: data.teamId, type: data.type, message: `Violation detected: ${data.type}` });

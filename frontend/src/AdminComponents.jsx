@@ -584,10 +584,15 @@ const ImageVaultSection = () => {
   useEffect(() => { fetchImages(); }, []);
   const fetchImages = async () => {
     try {
-      const res = await fetch("http://localhost:5001/api/admin/images");
+      const res = await fetch("https://mayavyuh-backend.onrender.com/api/admin/images");
       const data = await res.json();
-      setImages(data);
-    } catch(err) { console.error(err); }
+      if (Array.isArray(data)) {
+        setImages(data);
+      } else {
+        console.error("Backend error:", data);
+        setImages([]);
+      }
+    } catch(err) { console.error(err); setImages([]); }
   };
 
   const handleUpload = async (e) => {
@@ -597,12 +602,7 @@ const ImageVaultSection = () => {
     const formData = new FormData();
     formData.append("image", file);
     try {
-      const uploadRes = await fetch("http://localhost:5001/api/upload", { method: "POST", body: formData });
-      const { url } = await uploadRes.json();
-      await fetch("http://localhost:5001/api/admin/images", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: "http://localhost:5001" + url }),
-      });
+      await fetch("https://mayavyuh-backend.onrender.com/api/admin/upload-image", { method: "POST", body: formData });
       fetchImages();
     } catch (err) { console.error(err); } 
     finally { setLoading(false); }
@@ -610,7 +610,7 @@ const ImageVaultSection = () => {
 
   const handleDelete = async (id) => {
     try {
-      await fetch(`http://localhost:5001/api/admin/images/${id}`, { method: 'DELETE' });
+      await fetch(`https://mayavyuh-backend.onrender.com/api/admin/images/${id}`, { method: 'DELETE' });
       setImages(images.filter(img => img._id !== id));
     } catch(err) { console.error(err); }
   };
@@ -659,7 +659,7 @@ export const AdminDashboard = ({ teams, setTeams, eventState, setEventState }) =
 
   const fetchSession = async () => {
     try {
-      const res = await fetch('http://localhost:5001/api/game/status');
+      const res = await fetch('https://mayavyuh-backend.onrender.com/api/game/status');
       const data = await res.json();
       if (data.session) setSession(data.session);
     } catch (err) { console.error(err); }
@@ -690,7 +690,7 @@ export const AdminDashboard = ({ teams, setTeams, eventState, setEventState }) =
     setLoading(true);
     try {
       const duration = round ? durations[round] : undefined;
-      await fetch('http://localhost:5001/api/game/start', {
+      await fetch('https://mayavyuh-backend.onrender.com/api/game/start', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, round, duration })
       });
