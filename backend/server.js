@@ -35,7 +35,7 @@ const multer = require('multer');
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 }
+  limits: { fileSize: 8 * 1024 * 1024 }
 });
 
 // OpenAI removed, using Hugging Face Inference API
@@ -117,8 +117,15 @@ app.post('/api/player/upload-submission', upload.single('image'), async (req, re
     const fileContent = req.file.buffer;
     const extension = req.file.originalname.split('.').pop().replace(/[^a-zA-Z0-9]/g, '');
     
+    const team = await Team.findById(teamId);
+    if (!team) {
+      return res.status(404).json({ success: false, error: "Team not found" });
+    }
+
+    const sanitizedTeamName = team.name.replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '');
+
     // Always perfectly organize by team and round
-    const key = `submissions/${teamId}/${round}/${uuidv4()}.${extension}`;
+    const key = `submissions/${sanitizedTeamName}/round${round}.${extension}`;
 
     const command = new PutObjectCommand({
       Bucket: process.env.AWS_S3_BUCKET_NAME,
@@ -131,13 +138,11 @@ app.post('/api/player/upload-submission', upload.single('image'), async (req, re
 
     const fullUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
 
-    const newSubmission = new Submission({
-      team: teamId,
-      round: round,
-      finalImageUrl: fullUrl,
-    });
-    
-    await newSubmission.save();
+    await Submission.findOneAndUpdate(
+      { team: teamId, round: round },
+      { finalImageUrl: fullUrl },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
 
     res.json({ success: true, url: fullUrl });
 
