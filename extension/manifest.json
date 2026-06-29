@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "MayaVyuh Anti-Cheat",
+  "version": "1.0",
+  "description": "Forcefully closes Gemini tabs when the Datacron is paused.",
+  "permissions": [
+    "tabs"
+  ],
+  "host_permissions": [
+    "*://gemini.google.com/*",
+    "*://localhost/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://localhost/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

@@ -430,27 +430,62 @@ const IntervalScreen = ({ title, message, timeLeft }) => (
 const RoundDisplay = ({ playerLabel, targetImage, onComplete, roundLabel, storageKey, isPaused, timeLeft, isRoundEnded, teamId, registerGeminiWindow }) => {
   const [uploading, setUploading] = useState(false);
   const [uploadedImgUrl, setUploadedImgUrl] = useState(null);
-  const [isGeminiLaunched, setIsGeminiLaunched] = useState(false);
-  const [geminiLink, setGeminiLink] = useState("");
+  const [isGeminiLaunched, setIsGeminiLaunched] = usePersistentState(`maya_${storageKey}_launched`, false);
+  const [geminiLink, setGeminiLink] = usePersistentState(`maya_${storageKey}_link`, "");
   const [verifying, setVerifying] = useState(false);
+  const geminiWindowRef = useRef(null);
+
+  useEffect(() => {
+    if (isPaused) {
+      window.dispatchEvent(new CustomEvent("mayavyuh_pause"));
+      try {
+        if (geminiWindowRef.current && !geminiWindowRef.current.closed) {
+          geminiWindowRef.current.close();
+        } else {
+          // Attempt to close even if we lost the reference (e.g., due to refresh)
+          const fallbackWin = window.open('', 'GeminiPopup');
+          if (fallbackWin) fallbackWin.close();
+        }
+      } catch (e) {
+        console.error("Could not close Gemini window", e);
+      }
+      setIsGeminiLaunched(false); // Reset so they have to reopen when resumed
+    }
+  }, [isPaused]);
 
   const fmtTime = (s) => `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
 
   const handleOpenGemini = () => {
-    const sw = window.screen.availWidth;
-    const sh = window.screen.availHeight;
+    // Attempt to force the main app into True Fullscreen
+    try {
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen();
+      }
+    } catch (e) {
+      console.warn("Fullscreen request blocked.");
+    }
+
+    const sw = window.screen.width;
+    const sh = window.screen.height;
     const half = Math.floor(sw / 2);
 
+<<<<<<< HEAD
     // Open Gemini on the right half
     const geminiWin = window.open('https://gemini.google.com', 'GeminiPopup', `width=${half},height=${sh},left=${half},top=0`);
+=======
+    const url = geminiLink.trim() ? geminiLink.trim() : 'https://gemini.google.com';
+
+    // Open Gemini on the right half (using absolute screen dimensions)
+    geminiWindowRef.current = window.open(url, 'GeminiPopup', `width=${half},height=${sh},left=${half},top=0`);
+>>>>>>> 1c10010 (Update anti-cheat, Gemini link persistence, locking mechanism, and admin telemetry)
     
     // Register the popup with anti-cheat so blur events aren't flagged
     if (registerGeminiWindow) registerGeminiWindow(geminiWin);
 
     // Attempt to resize current window to the left half
     try {
-      window.moveTo(0, 0);
       window.resizeTo(half, sh);
+      window.moveTo(0, 0);
     } catch (e) {
       console.warn("Browser blocked window resize", e);
     }
@@ -507,59 +542,121 @@ const RoundDisplay = ({ playerLabel, targetImage, onComplete, roundLabel, storag
 
   if (isGeminiLaunched) {
     return (
+<<<<<<< HEAD
       <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="ac-protected-content" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', width: "50vw", padding: "32px 40px", boxSizing: "border-box", position: "relative", zIndex: 1 }}>
+=======
+      <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', width: isRoundEnded ? "100%" : "50vw", padding: "32px 40px", boxSizing: "border-box", position: "relative", zIndex: 1 }}>
+>>>>>>> 1c10010 (Update anti-cheat, Gemini link persistence, locking mechanism, and admin telemetry)
         
         {/* Header Row */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
-          <div style={{ fontSize: 40, fontFamily: "'Orbitron'", color: isPaused ? "#ff2a2a" : "#D4AF37", textShadow: `0 0 10px ${isPaused ? 'rgba(255,42,42,0.5)' : 'rgba(212,175,55,0.5)'}`, letterSpacing: 2 }}>
-            {fmtTime(timeLeft)}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32, maxWidth: isRoundEnded ? 800 : "none", margin: isRoundEnded ? "0 auto 32px auto" : "0", width: "100%" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+            <div style={{ fontSize: 40, fontFamily: "'Orbitron'", color: isPaused ? "#ff2a2a" : "#D4AF37", textShadow: `0 0 10px ${isPaused ? 'rgba(255,42,42,0.5)' : 'rgba(212,175,55,0.5)'}`, letterSpacing: 2 }}>
+              {fmtTime(timeLeft)}
+            </div>
+            <div className="title-secondary" style={{ marginBottom: 0, border: "none", fontSize: 24, letterSpacing: 2, color: "var(--neon-cyan)" }}>
+              {roundLabel}
+            </div>
           </div>
-          <div className="title-secondary" style={{ marginBottom: 0, border: "none", fontSize: 24, letterSpacing: 2, color: "var(--neon-cyan)" }}>
-            {roundLabel}
-          </div>
+          
+          {/* Top Right Recontinue / Link saving */}
+          {!isRoundEnded && (
+            <div style={{ display: "flex", gap: 8, alignItems: "stretch" }}>
+              <input 
+                type="url" 
+                placeholder="Save Gemini Link to Resume" 
+                value={geminiLink} 
+                onChange={e => setGeminiLink(e.target.value)} 
+                readOnly={geminiLink.trim().length > 0}
+                style={{ width: 250, padding: "8px 12px", background: "rgba(0,0,0,0.5)", border: "1px solid var(--neon-cyan)", color: geminiLink.trim() ? "var(--neon-cyan)" : "#fff", fontFamily: "'Share Tech Mono'", outline: "none", borderRadius: 4, fontSize: 12, opacity: geminiLink.trim() ? 0.8 : 1 }} 
+              />
+              <button className="btn-imperial" onClick={handleOpenGemini} style={{ padding: "8px 16px", fontSize: 12, display: "flex", alignItems: "center" }}>
+                REOPEN ➔
+              </button>
+            </div>
+          )}
         </div>
         
         {/* Main Panel */}
         <motion.div layout className="glass-panel" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "32px", width: "100%", maxWidth: "800px", margin: "0 auto", boxSizing: "border-box" }}>
            <div className="title-secondary" style={{ marginBottom: 24, fontSize: 20 }}>TARGET DATACRON</div>
            
+<<<<<<< HEAD
            {targetImage ? (
               <motion.div layout style={{ width: "100%", flex: 1, minHeight: 300, display: "flex", justifyContent: "center", alignItems: "center", background: "rgba(0,0,0,0.3)", borderRadius: 8, padding: 16, border: "1px solid rgba(255,255,255,0.1)", marginBottom: 24 }}>
                 {/* ac-protected-content blurs this on focus loss */}
                 <motion.img layoutId="target-image" src={targetImage} alt="target" style={{ maxWidth: "100%", maxHeight: "50vh", objectFit: "contain", borderRadius: 4, boxShadow: "0 0 20px rgba(0,0,0,0.5)" }} />
               </motion.div>
+=======
+           {isPaused ? (
+             <div style={{ textAlign: "center", padding: 40, flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                <div style={{ fontSize: 64, marginBottom: 16 }}>⏸️</div>
+                <div style={{ fontFamily: "'Orbitron'", fontSize: 24, color: "#ff2a2a" }}>DATACRON PAUSED</div>
+                <div style={{ color: "var(--text-dim)", marginTop: 16 }}>Target image hidden. Awaiting Admin...</div>
+             </div>
+           ) : isRoundEnded && !uploadedImgUrl ? (
+             <div style={{ textAlign: "center", padding: 20, width: "100%" }}>
+                <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
+                <div style={{ fontFamily: "'Orbitron'", fontSize: 20, color: "var(--neon-red)", marginBottom: 16 }}>PHASE SEALED</div>
+                <div style={{ color: "var(--text-dim)", marginBottom: 24 }}>Time is up. Submit your final artifact immediately.</div>
+                
+                <motion.label layout style={{ width: "100%", cursor: uploading ? "not-allowed" : "pointer" }}>
+                  <div style={{ width: "100%", padding: "16px", border: "1px solid rgba(255, 42, 42, 0.5)", borderRadius: 8, background: "rgba(255,0,0,0.1)", textAlign: "center", transition: "all 0.3s" }}>
+                    <span style={{ color: uploading ? "var(--text-dim)" : "var(--neon-red)", fontSize: 16, letterSpacing: 2, fontFamily: "'Orbitron'", fontWeight: "bold" }}>
+                      {uploading ? "UPLOADING ARTIFACT..." : "UPLOAD FINAL IMAGE"}
+                    </span>
+                    <input type="file" accept="image/*" style={{ display: "none" }} onChange={handleUpload} disabled={uploading} />
+                  </div>
+                </motion.label>
+             </div>
+>>>>>>> 1c10010 (Update anti-cheat, Gemini link persistence, locking mechanism, and admin telemetry)
            ) : (
-              <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", color: "var(--text-dim)", fontFamily: "'Orbitron'" }}>NO TARGET</div>
-           )}
+             <>
+               {targetImage && !isRoundEnded ? (
+                  <motion.div layout style={{ width: "100%", flex: 1, minHeight: 300, display: "flex", justifyContent: "center", alignItems: "center", background: "rgba(0,0,0,0.3)", borderRadius: 8, padding: 16, border: "1px solid rgba(255,255,255,0.1)", marginBottom: 24 }}>
+                    <motion.img layoutId="target-image" src={targetImage} alt="target" style={{ maxWidth: "100%", maxHeight: "50vh", objectFit: "contain", borderRadius: 4, boxShadow: "0 0 20px rgba(0,0,0,0.5)" }} />
+                  </motion.div>
+               ) : !isRoundEnded && (
+                  <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", color: "var(--text-dim)", fontFamily: "'Orbitron'", minHeight: 300 }}>NO TARGET</div>
+               )}
 
-           {!uploadedImgUrl ? (
-              <motion.label layout style={{ width: "100%", cursor: uploading ? "not-allowed" : "pointer" }}>
-                <div style={{ width: "100%", padding: "16px", border: "1px solid rgba(0, 255, 255, 0.3)", borderRadius: 8, background: "rgba(0,0,0,0.6)", textAlign: "center", transition: "all 0.3s", boxShadow: "inset 0 0 10px rgba(0, 255, 255, 0.05)" }}>
-                  <span style={{ color: uploading ? "var(--text-dim)" : "var(--neon-cyan)", fontSize: 16, letterSpacing: 2, fontFamily: "'Orbitron'", fontWeight: "bold" }}>
-                    {uploading ? "UPLOADING ARTIFACT..." : "UPLOAD GENERATED IMAGE"}
-                  </span>
-                  <input type="file" accept="image/*" style={{ display: "none" }} onChange={handleUpload} disabled={uploading} />
-                </div>
-              </motion.label>
-           ) : (
-              <motion.div layout style={{ width: "100%" }}>
-                <div className="title-secondary" style={{ marginBottom: 16, fontSize: 16 }}>REVIEW SPELL</div>
-                <div style={{ width: "100%", display: "flex", justifyContent: "center", alignItems: "center", background: "rgba(0,0,0,0.3)", borderRadius: 8, padding: 16, border: "1px solid rgba(212, 175, 55, 0.4)", marginBottom: 24 }}>
-                  <img src={uploadedImgUrl} alt="generated preview" style={{ maxWidth: "100%", maxHeight: "30vh", objectFit: "contain", borderRadius: 4 }} />
-                </div>
-                
-                <div style={{ width: "100%", marginBottom: 16 }}>
-                  <div style={{ color: "var(--neon-cyan)", fontSize: 12, marginBottom: 8, letterSpacing: 2 }}>GEMINI CHAT LINK:</div>
-                  <input type="url" placeholder="https://gemini.google.com/app/6c03e86xxxxxxxx3" value={geminiLink} onChange={e=>setGeminiLink(e.target.value)} style={{ width: "100%", padding: "16px", background: "rgba(0,0,0,0.5)", border: "1px solid var(--neon-cyan)", color: "#fff", fontFamily: "'Share Tech Mono'", outline: "none", borderRadius: 4 }} />
-                </div>
-                
-                <div style={{ display: "flex", gap: 16 }}>
-                  <button className="btn-imperial-danger" style={{ flex: 1, padding: 16 }} onClick={() => setUploadedImgUrl(null)}>RETRY</button>
-                  <button className="btn-imperial" style={{ flex: 2, padding: 16, borderColor: "var(--neon-green)", color: "var(--neon-green)", opacity: verifying ? 0.5 : 1 }} onClick={handleSubmit} disabled={verifying}>
-                    {verifying ? "VERIFYING..." : "SUBMIT TO DATACRON ➔"}
-                  </button>
-                </div>
-              </motion.div>
+               {!uploadedImgUrl ? (
+                  <motion.label layout style={{ width: "100%", cursor: uploading ? "not-allowed" : "pointer" }}>
+                    <div style={{ width: "100%", padding: "16px", border: "1px solid rgba(0, 255, 255, 0.3)", borderRadius: 8, background: "rgba(0,0,0,0.6)", textAlign: "center", transition: "all 0.3s", boxShadow: "inset 0 0 10px rgba(0, 255, 255, 0.05)" }}>
+                      <span style={{ color: uploading ? "var(--text-dim)" : "var(--neon-cyan)", fontSize: 16, letterSpacing: 2, fontFamily: "'Orbitron'", fontWeight: "bold" }}>
+                        {uploading ? "UPLOADING ARTIFACT..." : "UPLOAD GENERATED IMAGE"}
+                      </span>
+                      <input type="file" accept="image/*" style={{ display: "none" }} onChange={handleUpload} disabled={uploading} />
+                    </div>
+                  </motion.label>
+               ) : (
+                  <motion.div layout style={{ width: "100%" }}>
+                    <div className="title-secondary" style={{ marginBottom: 16, fontSize: 16 }}>REVIEW SPELL</div>
+                    <div style={{ width: "100%", display: "flex", justifyContent: "center", alignItems: "center", background: "rgba(0,0,0,0.3)", borderRadius: 8, padding: 16, border: "1px solid rgba(212, 175, 55, 0.4)", marginBottom: 24 }}>
+                      <img src={uploadedImgUrl} alt="generated preview" style={{ maxWidth: "100%", maxHeight: "30vh", objectFit: "contain", borderRadius: 4 }} />
+                    </div>
+                    
+                    <div style={{ width: "100%", marginBottom: 16 }}>
+                      <div style={{ color: "var(--neon-cyan)", fontSize: 12, marginBottom: 8, letterSpacing: 2 }}>GEMINI CHAT LINK:</div>
+                      <input 
+                        type="url" 
+                        placeholder="https://gemini.google.com/app/6c03e86xxxxxxxx3" 
+                        value={geminiLink} 
+                        onChange={e=>setGeminiLink(e.target.value)} 
+                        readOnly={geminiLink.trim().length > 0}
+                        style={{ width: "100%", padding: "16px", background: "rgba(0,0,0,0.5)", border: "1px solid var(--neon-cyan)", color: geminiLink.trim() ? "var(--neon-cyan)" : "#fff", fontFamily: "'Share Tech Mono'", outline: "none", borderRadius: 4, opacity: geminiLink.trim() ? 0.8 : 1 }} 
+                      />
+                    </div>
+                    
+                    <div style={{ display: "flex", gap: 16 }}>
+                      <button className="btn-imperial-danger" style={{ flex: 1, padding: 16 }} onClick={() => setUploadedImgUrl(null)}>RETRY</button>
+                      <button className="btn-imperial" style={{ flex: 2, padding: 16, borderColor: "var(--neon-green)", color: "var(--neon-green)", opacity: verifying ? 0.5 : 1 }} onClick={handleSubmit} disabled={verifying}>
+                        {verifying ? "VERIFYING..." : "SUBMIT TO DATACRON ➔"}
+                      </button>
+                    </div>
+                  </motion.div>
+               )}
+             </>
            )}
         </motion.div>
       </motion.div>
@@ -587,9 +684,26 @@ const RoundDisplay = ({ playerLabel, targetImage, onComplete, roundLabel, storag
 
         <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
           <div style={{ color: "var(--text-dim)", marginBottom: 8, fontSize: 14 }}>TARGET DATACRON:</div>
+<<<<<<< HEAD
           {/* ac-protected-content: blurs on focus loss */}
           <motion.div layout className="glass-panel ac-protected-content" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 0, maxHeight: 400, overflow: "hidden" }}>
             {targetImage ? <motion.img layoutId="target-image" src={targetImage} alt="target" style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : <div style={{ color: "var(--text-dim)", fontFamily: "'Orbitron'" }}>NO TARGET</div>}
+=======
+          <motion.div layout className="glass-panel" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 0, maxHeight: 400, overflow: "hidden" }}>
+            {isPaused || isRoundEnded ? (
+              <div style={{ color: "var(--text-dim)", fontFamily: "'Orbitron'", textAlign: "center", padding: 16 }}>
+                <div style={{ fontSize: 32, marginBottom: 8 }}>{isPaused ? "⏸️" : "🔒"}</div>
+                {isPaused ? "TARGET HIDDEN" : "PHASE SEALED"}
+              </div>
+            ) : targetImage ? (
+              <motion.img layoutId="target-image" src={targetImage} alt="target" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+            ) : (
+              <div style={{ color: "var(--text-dim)", fontFamily: "'Orbitron'", textAlign: "center", padding: 16 }}>
+                <div style={{ fontSize: 32, marginBottom: 8, opacity: 0.5 }}>👁️‍🗨️</div>
+                BLIND RECREATION<br/>NO TARGET
+              </div>
+            )}
+>>>>>>> 1c10010 (Update anti-cheat, Gemini link persistence, locking mechanism, and admin telemetry)
           </motion.div>
         </div>
       </div>
@@ -597,10 +711,14 @@ const RoundDisplay = ({ playerLabel, targetImage, onComplete, roundLabel, storag
       {/* Main Action Area */}
       <motion.div layout className="chat-main" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 40 }}>
         {isRoundEnded ? (
-          <div style={{ textAlign: "center" }}>
+          <div className="glass-panel" style={{ width: "100%", maxWidth: 600, textAlign: "center", padding: 48 }}>
              <div style={{ fontSize: 64, marginBottom: 16 }}>🔒</div>
              <div style={{ fontFamily: "'Orbitron'", fontSize: 24, color: "var(--neon-red)" }}>PHASE SEALED</div>
-             <div style={{ color: "var(--text-dim)", marginTop: 16 }}>This phase has been closed by the Admin.</div>
+             <div style={{ color: "var(--text-dim)", marginTop: 16, marginBottom: 32 }}>This phase has been closed by the Admin. You must submit your final result.</div>
+             
+             <button className="btn-imperial-danger" onClick={() => setIsGeminiLaunched(true)} style={{ width: "100%", padding: 20, fontSize: 16, display: "flex", justifyContent: "center", gap: 12 }}>
+               OPEN FINAL SUBMISSION PANEL ➔
+             </button>
           </div>
         ) : isPaused ? (
           <div style={{ textAlign: "center" }}>
@@ -616,9 +734,20 @@ const RoundDisplay = ({ playerLabel, targetImage, onComplete, roundLabel, storag
               Launch Gemini in Split-Screen Mode to generate your spell.<br/>
               Your target image will remain visible here.
             </div>
+
+            <div style={{ marginBottom: 24 }}>
+              <input 
+                type="url" 
+                placeholder="Paste Gemini Chat Link to Resume (Optional)" 
+                value={geminiLink} 
+                onChange={e => setGeminiLink(e.target.value)} 
+                readOnly={geminiLink.trim().length > 0}
+                style={{ width: "100%", padding: "16px", background: "rgba(0,0,0,0.5)", border: "1px solid var(--neon-cyan)", color: geminiLink.trim() ? "var(--neon-cyan)" : "#fff", fontFamily: "'Share Tech Mono'", outline: "none", borderRadius: 4, textAlign: "center", opacity: geminiLink.trim() ? 0.8 : 1 }} 
+              />
+            </div>
             
             <button className="btn-imperial" onClick={handleOpenGemini} style={{ width: "100%", padding: 20, fontSize: 16, display: "flex", justifyContent: "center", gap: 12 }}>
-              LAUNCH GEMINI (SPLIT SCREEN) ➔
+              {geminiLink.trim() ? "RECONTINUE GEMINI ➔" : "LAUNCH GEMINI (SPLIT SCREEN) ➔"}
             </button>
           </div>
         )}
@@ -741,6 +870,25 @@ const PlayerSection = ({ globalTeams, setGlobalTeams, eventState }) => {
     onDisqualify: handleDisqualify
   });
   
+  const [isBannedLocally, setIsBannedLocally] = usePersistentState("maya_banned", false);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // If they hide the tab (switch tabs or minimize), ban them!
+        setIsBannedLocally(true);
+        if (myTeam?.id) {
+          fetch("http://localhost:5001/api/game/teams/update", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ teamId: myTeam.id, updates: { status: "banned" } })
+          }).catch(console.error);
+        }
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [myTeam, setIsBannedLocally]);
   useEffect(() => {
     if (!myTeam) return;
     const fetchSession = async () => {
@@ -814,7 +962,7 @@ const PlayerSection = ({ globalTeams, setGlobalTeams, eventState }) => {
     }
   });
 
-  const handleRegister = (t) => {
+  const handleRegister = async (t) => {
     setTargetImage(null);
     setR1Img(null);
     setR2Img(null);
@@ -823,16 +971,53 @@ const PlayerSection = ({ globalTeams, setGlobalTeams, eventState }) => {
     setScore(null);
     setDisqualifiedReason(null);
     
-    setMyTeam(t);
-    setGlobalTeams(prev => [...prev, t]);
-    setPhase("lobby");
+    try {
+      const res = await fetch("http://localhost:5001/api/game/teams/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamName: t.name, player1: t.player1, player2: t.player2, role: 'creator' })
+      });
+      const data = await res.json();
+      if (data.success && data.team) {
+        t.id = data.team._id;
+        setMyTeam(t);
+        setGlobalTeams(prev => [...prev.filter(x => x.id !== t.id), t]);
+        setPhase("lobby");
+      } else {
+        alert("Server rejected registration. Is the backend running?");
+      }
+    } catch(err) { 
+      console.error("Registration sync failed", err);
+      alert("Registration failed! Could not connect to backend server.");
+    }
   };
 
-  const updateTeamStatus = (updates) => {
+  const updateTeamStatus = async (updates) => {
     setGlobalTeams(prev => prev.map(t => t.id === myTeam.id ? { ...t, ...updates } : t));
+    try {
+      await fetch("http://localhost:5001/api/game/teams/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId: myTeam.id, updates })
+      });
+    } catch(err) { console.error("Status update sync failed", err); }
   };
+
+  const currentTeamState = globalTeams.find(t => t.id === myTeam?.id);
+
+  // Auto-unban if backend says we are active, or close Gemini if banned!
+  useEffect(() => {
+    if (isBannedLocally && currentTeamState?.status === "active") {
+      setIsBannedLocally(false);
+      localStorage.removeItem("maya_banned");
+    }
+    if (isBannedLocally || currentTeamState?.status === "banned") {
+      window.dispatchEvent(new CustomEvent("mayavyuh_pause"));
+    }
+  }, [currentTeamState?.status, isBannedLocally, setIsBannedLocally]);
 
   if (!myTeam) return <RegistrationScreen onRegister={handleRegister} />;
+<<<<<<< HEAD
   
   if (disqualifiedReason) {
     return <DisqualifiedScreen teamName={myTeam.name} reason={disqualifiedReason} />;
@@ -840,11 +1025,33 @@ const PlayerSection = ({ globalTeams, setGlobalTeams, eventState }) => {
   
   const currentTeamState = globalTeams.find(t => t.id === myTeam?.id);
   if (currentTeamState?.status === "banned") {
+=======
+
+  if (currentTeamState?.status === "banned" || isBannedLocally) {
+>>>>>>> 1c10010 (Update anti-cheat, Gemini link persistence, locking mechanism, and admin telemetry)
     return (
-      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", position: "relative", zIndex: 1 }}>
+      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", position: "relative", zIndex: 1, background: "rgba(255, 0, 0, 0.1)" }}>
         <div style={{ fontSize: 64, marginBottom: 20 }}>☠️</div>
-        <div className="title-primary" style={{ color: "var(--neon-red)" }}>BANNED</div>
-        <div style={{ fontFamily: "'Share Tech Mono'", color: "var(--neon-red)", marginTop: 16 }}>YOUR TEAM HAS BEEN REMOVED FROM THE TRIAL</div>
+        <div className="title-primary" style={{ color: "var(--neon-red)", textShadow: "0 0 20px rgba(255, 0, 0, 0.5)" }}>BANNED</div>
+        <div style={{ fontFamily: "'Share Tech Mono'", color: "var(--text-dim)", marginTop: 16, maxWidth: 600, textAlign: "center", lineHeight: 1.5 }}>
+          <strong style={{ color: "var(--neon-red)" }}>VIOLATION DETECTED:</strong> YOUR TEAM HAS BEEN DISQUALIFIED FOR SWITCHING TABS OR MINIMIZING THE ASSESSENT WINDOW.
+        </div>
+        
+        {/* TEMPORARY UNBAN BUTTON FOR TESTING */}
+        <button 
+          className="btn" 
+          style={{ marginTop: 40, border: "1px solid rgba(255, 255, 255, 0.2)", background: "rgba(255,255,255,0.05)" }}
+          onClick={() => {
+            localStorage.removeItem("maya_banned");
+            setIsBannedLocally(false);
+            if (currentTeamState?.status === "banned") {
+              updateTeamStatus({ status: "active" });
+            }
+            setTimeout(() => window.location.reload(), 500);
+          }}
+        >
+          [TESTING] UNBAN ME
+        </button>
       </div>
     );
   }
@@ -852,37 +1059,52 @@ const PlayerSection = ({ globalTeams, setGlobalTeams, eventState }) => {
   const isPaused = session?.isPaused || false;
   const status = session?.status || 'waiting';
 
-  // Common props passed to all RoundDisplay instances
-  const roundProps = { teamId: myTeam.id, isPaused, timeLeft, registerGeminiWindow };
+  if (currentTeamState?.status === "banned" || isBannedLocally) {
+  const renderPhase = () => {
+    // Common props passed to all RoundDisplay instances
+    const roundProps = { teamId: myTeam.id, isPaused, timeLeft, registerGeminiWindow };
 
-  if (phase === "lobby") return <LobbyScreen />;
-  if (phase === "r1") return <RoundDisplay {...roundProps} storageKey="r1" playerLabel={`PLAYER 1 (${myTeam.player1})`} targetImage={targetImage} roundLabel="ROUND 1: INITIAL CREATION" onComplete={(img, link) => { setR1Img(img); updateTeamStatus({ round: 1, r1Link: link }); setPhase("interval1"); }} isRoundEnded={status === 'round1_ended'} />;
-  if (phase === "interval1") return <IntervalScreen title="VERBAL TRANSFER" message={`PLAYER 1 (${myTeam.player1}), describe the target image to PLAYER 2 (${myTeam.player2}) verbally. Do not show them the screen!`} timeLeft={timeLeft} />;
-  if (phase === "r2") return <RoundDisplay {...roundProps} storageKey="r2" playerLabel={`PLAYER 2 (${myTeam.player2})`} targetImage={r1Img} roundLabel="ROUND 2: BLIND RECREATION" onComplete={(img, link) => { setR2Img(img); updateTeamStatus({ round: 2, r2Link: link }); setPhase("wait_for_r3"); }} isRoundEnded={status === 'round2_ended'} />;
-  if (phase === "wait_for_r3") return <IntervalScreen title="HOLD POSITION" message="AWAITING ADMIN PROTOCOL FOR ROUND 3" timeLeft={timeLeft} />;
-  if (phase === "r3") return <RoundDisplay {...roundProps} storageKey="r3" playerLabel={`PLAYER 1 (${myTeam.player1})`} targetImage={r2Img} roundLabel="ROUND 3: REFINEMENT" onComplete={(img, link) => { setR3Img(img); updateTeamStatus({ r3Link: link }); setPhase("select"); }} isRoundEnded={status === 'round3_ended'} />;
-  if (phase === "select") return <SelectionScreen imgR2={r2Img} imgR3={r3Img} onSelect={async (img) => { 
-    setFinalImg(img); 
-    setPhase("judgment"); 
-    try {
-      const res = await fetch(`${API}/api/similarity`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ original_url: targetImage, submitted_url: img })
-      });
-      const data = await res.json();
-      const s = data.similarity_score || 0;
-      setScore(s);
-      updateTeamStatus({ round: 3, score: s, finalImage: img });
-    } catch(e) {
-      console.error(e);
-      setScore(0);
-      updateTeamStatus({ round: 3, score: 0, finalImage: img });
-    }
-  }} />;
-  if (phase === "judgment") return <JudgmentScreen originalImg={targetImage} finalImg={finalImg} score={score} onFinish={() => setPhase("leaderboard")} />;
-  if (phase === "leaderboard") return <LeaderboardRedirect teams={globalTeams} />;
+    if (phase === "lobby") return <LobbyScreen />;
+    if (phase === "r1") return <RoundDisplay {...roundProps} storageKey="r1" playerLabel={`PLAYER 1 (${myTeam.player1})`} targetImage={targetImage} roundLabel="ROUND 1: INITIAL CREATION" onComplete={(img, link) => { setR1Img(img); updateTeamStatus({ round: 1, r1Link: link }); setPhase("interval1"); }} isRoundEnded={status === 'round1_ended'} />;
+    if (phase === "interval1") return <IntervalScreen title="VERBAL TRANSFER" message={`PLAYER 1 (${myTeam.player1}), describe the target image to PLAYER 2 (${myTeam.player2}) verbally. Do not show them the screen!`} timeLeft={timeLeft} />;
+    if (phase === "r2") return <RoundDisplay {...roundProps} storageKey="r2" playerLabel={`PLAYER 2 (${myTeam.player2})`} targetImage={r1Img} roundLabel="ROUND 2: BLIND RECREATION" onComplete={(img, link) => { setR2Img(img); updateTeamStatus({ round: 2, r2Link: link }); setPhase("wait_for_r3"); }} isRoundEnded={status === 'round2_ended'} />;
+    if (phase === "wait_for_r3") return <IntervalScreen title="HOLD POSITION" message="AWAITING ADMIN PROTOCOL FOR ROUND 3" timeLeft={timeLeft} />;
+    if (phase === "r3") return <RoundDisplay {...roundProps} storageKey="r3" playerLabel={`PLAYER 1 (${myTeam.player1})`} targetImage={r2Img} roundLabel="ROUND 3: REFINEMENT" onComplete={(img, link) => { setR3Img(img); updateTeamStatus({ r3Link: link }); setPhase("select"); }} isRoundEnded={status === 'round3_ended'} />;
+    if (phase === "select") return <SelectionScreen imgR2={r2Img} imgR3={r3Img} onSelect={async (img) => { 
+      setFinalImg(img); 
+      setPhase("judgment"); 
+      try {
+        const res = await fetch(`${API}/api/similarity`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ original_url: targetImage, submitted_url: img })
+        });
+        const data = await res.json();
+        const s = data.similarity_score || 0;
+        setScore(s);
+        updateTeamStatus({ round: 3, score: s, finalImage: img });
+      } catch(e) {
+        console.error(e);
+        setScore(0);
+        updateTeamStatus({ round: 3, score: 0, finalImage: img });
+      }
+    }} />;
+    if (phase === "judgment") return <JudgmentScreen originalImg={targetImage} finalImg={finalImg} score={score} onFinish={() => setPhase("leaderboard")} />;
+    if (phase === "leaderboard") return <LeaderboardRedirect teams={globalTeams} />;
+    return null;
+  };
 
-  return null;
+  return (
+    <>
+      {renderPhase()}
+      <button 
+        onClick={() => { localStorage.clear(); window.location.reload(); }} 
+        className="btn" 
+        style={{ position: "fixed", bottom: 20, right: 20, zIndex: 9999, fontSize: 10, padding: "8px 16px", background: "rgba(255,42,42,0.1)", border: "1px solid rgba(255,42,42,0.3)", color: "rgba(255,255,255,0.5)" }}
+      >
+        [TESTING] CLEAR CACHE & LEAVE TEAM
+      </button>
+    </>
+  );
 };
 
 export default function App() {
@@ -892,6 +1114,34 @@ export default function App() {
 
   const [teams, setTeams] = useSyncState("maya_teams", INIT_TEAMS);
   const [eventState, setEventState] = useSyncState("maya_event", INIT_EVENT);
+
+  useEffect(() => {
+    const fetchTeams = async () => {
+      try {
+        const res = await fetch("http://localhost:5001/api/game/admin/teams");
+        const data = await res.json();
+        if (data.success && data.teams) {
+          const formattedTeams = data.teams.map(t => ({
+             id: t._id,
+             name: t.name,
+             player1: t.observer,
+             player2: t.creator,
+             status: t.status,
+             score: t.score || 0,
+             round: t.round || 0,
+             r1Link: t.r1Link || null,
+             r2Link: t.r2Link || null,
+             r3Link: t.r3Link || null,
+             finalImage: t.finalImage || null
+          }));
+          setTeams(prev => JSON.stringify(prev) === JSON.stringify(formattedTeams) ? prev : formattedTeams);
+        }
+      } catch(err) {}
+    };
+    fetchTeams();
+    const int = setInterval(fetchTeams, 3000);
+    return () => clearInterval(int);
+  }, [setTeams]);
 
   return (
     <>

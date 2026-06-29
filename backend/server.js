@@ -372,6 +372,7 @@ app.post('/api/game/start', async (req, res) => {
     } else if (action === 'end_round') {
       session.status = `round${round}_ended`;
       session.isPaused = false;
+      session.roundEndTime = now;
     } else if (action === 'finish') {
       session.status = 'finished';
       session.isPaused = false;

@@ -100,6 +100,18 @@ router.post('/game/teams/:id/ban', async (req, res) => {
   }
 });
 
+// Update team status/score
+router.post('/teams/update', async (req, res) => {
+  try {
+    const { teamId, updates } = req.body;
+    if (!teamId) return res.status(400).json({ error: 'teamId is required' });
+    const team = await Team.findByIdAndUpdate(teamId, { $set: updates }, { new: true });
+    res.json({ success: true, team });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Admin: Start Event / Round 1
 router.post('/admin/start-event', async (req, res) => {
   try {

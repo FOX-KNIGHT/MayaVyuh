@@ -683,6 +683,10 @@ export const AdminDashboard = ({ teams, setTeams, eventState, setEventState }) =
       const res = await fetch(`${API}/api/game/status`);
       const data = await res.json();
       if (data.session) setSession(data.session);
+
+      const resTeams = await fetch('http://localhost:5001/api/game/admin/teams');
+      const dataTeams = await resTeams.json();
+      if (dataTeams.teams) setTeams(dataTeams.teams);
     } catch (err) { console.error(err); }
   };
 
@@ -722,8 +726,27 @@ export const AdminDashboard = ({ teams, setTeams, eventState, setEventState }) =
     setLoading(false);
   };
 
-  const toggleBan = (id) => {
-    setTeams(prev => prev.map(t => t.id === id ? { ...t, status: t.status === "banned" ? "active" : "banned" } : t));
+  const toggleBan = async (id) => {
+    const team = teams.find(t => t.id === id);
+    if (!team) return;
+    const newStatus = team.status === "banned" ? "active" : "banned";
+    
+    // Optimistic local update
+    setTeams(prev => prev.map(t => t.id === id ? { ...t, status: newStatus } : t));
+    
+    // Send to backend
+    try {
+      await fetch("http://localhost:5001/api/game/teams/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId: id, updates: { status: newStatus } })
+      });
+      // Optionally trigger an immediate refetch
+      const res = await fetch("http://localhost:5001/api/game/admin/teams");
+      const data = await res.json();
+      // Wait for the next poll loop to pick up the changes naturally, 
+      // but we updated local state optimistically anyway.
+    } catch(err) { console.error("Toggle ban failed", err); }
   };
 
   const globalReset = () => {
