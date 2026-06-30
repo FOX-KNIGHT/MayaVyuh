@@ -194,6 +194,7 @@ router.get('/admin/teams', async (req, res) => {
 router.delete('/admin/teams', async (req, res) => {
   try {
     await Team.deleteMany({});
+    Object.keys(violationLog).forEach(k => delete violationLog[k]);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -211,3 +212,4 @@ router.get('/admin/leaderboard', async (req, res) => {
 });
 
 module.exports = router;
+
