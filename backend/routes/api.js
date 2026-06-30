@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const Team = require('../models/Team');
 const Session = require('../models/Session');
 const ImageBank = require('../models/ImageBank');
@@ -61,6 +62,10 @@ router.get('/anticheat/violations', (req, res) => {
 // Register a Team
 router.post('/teams/register', async (req, res) => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(500).json({ error: "Database not connected. Please ensure MONGO_URI is set on the server and IPs are whitelisted." });
+    }
+
     const { teamName, player1, player2, role } = req.body;
     
     let activeSession = await Session.findOne({ active: true });
