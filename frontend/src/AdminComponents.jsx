@@ -10,9 +10,9 @@ import bg4 from "./assets/bg-4.jpg";
 import bg5 from "./assets/bg-5.jpg";
 
 export const BG_IMAGES = [bg1, bg2, bg3, bg4, bg5];
-const API = import.meta.env.VITE_API_URL || "https://mayavyuh.onrender.com";
+const API = import.meta.env.VITE_API_URL || "https://mayavyuh-backend.onrender.com";
 
-const API_URL = import.meta.env.VITE_API_URL || "https://mayavyuh.onrender.com";
+const API_URL = import.meta.env.VITE_API_URL || "https://mayavyuh-backend.onrender.com";
 
 export const GlobalStyles = () => (
   <style>{`
@@ -317,34 +317,34 @@ const AdminLogin = ({ onLogin }) => {
 
   return (
     <div className="imperial-bg" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
-      {}
+      { }
       <div style={{ position: "absolute", width: "150vw", height: "150vh", background: "radial-gradient(circle at 50% 50%, rgba(212, 175, 55, 0.05) 0%, transparent 50%)", animation: "pulse 4s infinite alternate" }} />
       <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 600, height: 600, border: "1px dashed rgba(212, 175, 55, 0.2)", borderRadius: "50%", animation: "spin-slow 20s linear infinite" }} />
       <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 800, height: 800, border: "1px solid rgba(212, 175, 55, 0.05)", borderRadius: "50%", animation: "spin-reverse 30s linear infinite" }} />
 
-      <motion.form 
-        initial={{ opacity: 0, scale: 0.9, y: 20 }} 
-        animate={{ opacity: 1, scale: 1, y: 0 }} 
+      <motion.form
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
-        onSubmit={handleLogin} 
-        className="imperial-glass imperial-panel" 
+        onSubmit={handleLogin}
+        className="imperial-glass imperial-panel"
         style={{ width: 450, padding: 64, textAlign: "center", position: "relative", zIndex: 10, border: "1px solid rgba(212, 175, 55, 0.4)", boxShadow: "0 0 50px rgba(0,0,0,0.8), inset 0 0 30px rgba(212, 175, 55, 0.1)" }}
       >
         <div style={{ position: "absolute", top: -10, left: "50%", transform: "translateX(-50%)", background: "var(--bg-dark)", padding: "4px 24px", color: "#D4AF37", letterSpacing: 4, fontSize: 10, border: "1px solid rgba(212, 175, 55, 0.4)", borderRadius: 20 }}>IMPERIAL DATACRON</div>
-        
+
         <ShieldAlert size={64} color="#D4AF37" style={{ margin: "0 auto", marginBottom: 32, filter: "drop-shadow(0 0 15px rgba(212,175,55,0.4))" }} />
-        
+
         <div className="imperial-gold-text" style={{ fontFamily: "'Cinzel', serif", fontSize: 28, marginBottom: 8, letterSpacing: 6 }}>RESTRICTED AREA</div>
         <div style={{ color: "rgba(212, 175, 55, 0.6)", fontSize: 12, letterSpacing: 4, marginBottom: 48 }}>SECURITY CLEARANCE REQUIRED</div>
-        
+
         <div style={{ position: "relative", marginBottom: 32 }}>
-          <input 
-            type="password" 
-            placeholder="ENTER OVERRIDE CODE" 
-            value={pwd} 
-            onChange={e => { setPwd(e.target.value); setErr(""); }} 
-            style={{ width: "100%", background: "rgba(0,0,0,0.5)", border: "1px solid rgba(212, 175, 55, 0.3)", padding: "16px 24px", color: "#D4AF37", fontSize: 16, outline: "none", textAlign: "center", letterSpacing: 8, fontFamily: "'Orbitron', sans-serif", borderRadius: 4, transition: "all 0.3s" }} 
-            autoFocus 
+          <input
+            type="password"
+            placeholder="ENTER OVERRIDE CODE"
+            value={pwd}
+            onChange={e => { setPwd(e.target.value); setErr(""); }}
+            style={{ width: "100%", background: "rgba(0,0,0,0.5)", border: "1px solid rgba(212, 175, 55, 0.3)", padding: "16px 24px", color: "#D4AF37", fontSize: 16, outline: "none", textAlign: "center", letterSpacing: 8, fontFamily: "'Orbitron', sans-serif", borderRadius: 4, transition: "all 0.3s" }}
+            autoFocus
             onFocus={(e) => e.target.style.borderColor = "#D4AF37"}
             onBlur={(e) => e.target.style.borderColor = "rgba(212, 175, 55, 0.3)"}
           />
@@ -378,7 +378,7 @@ const MayaNexusNav = ({ active, setActive }) => {
   ];
 
   return (
-    <motion.div 
+    <motion.div
       style={{ position: "fixed", bottom: 48, left: "50%", transform: "translateX(-50%)", zIndex: 9999, display: "flex", gap: 16, padding: 16, background: "rgba(5, 2, 10, 0.9)", border: "1px solid rgba(212, 175, 55, 0.4)", borderRadius: 50, boxShadow: "0 0 50px rgba(0,0,0,0.9), inset 0 0 20px rgba(212, 175, 55, 0.1)", backdropFilter: "blur(20px)" }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -428,7 +428,7 @@ const ImageVaultSection = () => {
         console.error("Backend error:", data);
         setImages([]);
       }
-    } catch(err) { console.error(err); setImages([]); }
+    } catch (err) { console.error(err); setImages([]); }
   };
 
   const handleUpload = async (e) => {
@@ -441,13 +441,13 @@ const ImageVaultSection = () => {
     for (let i = 0; i < files.length; i++) {
       formData.append("images", files[i]);
     }
-    
+
     try {
       await fetch(`${API}/api/admin/upload-image`, { method: "POST", body: formData });
       fetchImages();
-    } catch (err) { console.error(err); } 
-    finally { 
-      setLoading(false); 
+    } catch (err) { console.error(err); }
+    finally {
+      setLoading(false);
       e.target.value = null; // Clear input to prevent stuck state
     }
   };
@@ -456,7 +456,7 @@ const ImageVaultSection = () => {
     try {
       await fetch(`${API}/api/admin/images/${id}`, { method: 'DELETE' });
       setImages(images.filter(img => img._id !== id));
-    } catch(err) { console.error(err); }
+    } catch (err) { console.error(err); }
   };
 
   return (
@@ -470,7 +470,7 @@ const ImageVaultSection = () => {
           </label>
         </div>
       </div>
-      
+
       <div className="custom-scrollbar" style={{ flex: 1, overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: 32, paddingRight: 16 }}>
         {images.map((img, i) => (
           <div key={img._id} style={{ position: "relative", height: 250, border: "1px solid rgba(212, 175, 55, 0.2)", borderRadius: 8, overflow: "hidden", background: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -478,7 +478,7 @@ const ImageVaultSection = () => {
               TEAM {img.teamNumber ? img.teamNumber : String(i + 1).padStart(2, '0')}
             </div>
             <button onClick={() => handleDelete(img._id)} className="btn-imperial-danger" style={{ position: "absolute", top: 12, right: 12, width: 32, height: 32, display: "flex", justifyContent: "center", alignItems: "center", fontSize: 16, zIndex: 10 }}>×</button>
-            <img src={img.url} alt={`Artifact ${i}`} style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.8, transition: "opacity 0.3s" }} onMouseOver={e=>e.currentTarget.style.opacity=1} onMouseOut={e=>e.currentTarget.style.opacity=0.8} />
+            <img src={img.url} alt={`Artifact ${i}`} style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.8, transition: "opacity 0.3s" }} onMouseOver={e => e.currentTarget.style.opacity = 1} onMouseOut={e => e.currentTarget.style.opacity = 0.8} />
           </div>
         ))}
         {images.length === 0 && (
@@ -494,7 +494,7 @@ const ImageVaultSection = () => {
 export const AdminDashboard = ({ teams, setTeams, eventState, setEventState }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeSection, setActiveSection] = useState("CORE");
-  
+
   const [session, setSession] = useState(null);
   const [durations, setDurations] = useState({ 1: 1200, 2: 1200, 3: 1500 });
   const [timeLeft, setTimeLeft] = useState(0);
@@ -571,7 +571,7 @@ export const AdminDashboard = ({ teams, setTeams, eventState, setEventState }) =
 
   const sortedTeams = [...teams];
   const status = session?.status || 'waiting';
-  const fmtTime = (s) => `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+  const fmtTime = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
   const isLive = status.includes('active');
   const isDanger = session?.isPaused;
   const itemVars = { hidden: { opacity: 0, scale: 0.95 }, show: { opacity: 1, scale: 1, transition: { type: "spring", stiffness: 80 } } };
@@ -606,7 +606,7 @@ export const AdminDashboard = ({ teams, setTeams, eventState, setEventState }) =
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 12, background: "rgba(0,0,0,0.6)", padding: "12px 16px", border: "1px solid rgba(212, 175, 55, 0.2)" }}>
-                          <input type="number" value={durations[r]} onChange={e => setDurations({...durations, [r]: parseInt(e.target.value)||0})} disabled={isActive} style={{ background: "transparent", border: "none", color: "#D4AF37", width: 60, textAlign: "center", fontSize: 16, outline: "none" }} />
+                          <input type="number" value={durations[r]} onChange={e => setDurations({ ...durations, [r]: parseInt(e.target.value) || 0 })} disabled={isActive} style={{ background: "transparent", border: "none", color: "#D4AF37", width: 60, textAlign: "center", fontSize: 16, outline: "none" }} />
                           <span style={{ fontSize: 10, color: "rgba(212,175,55,0.6)", letterSpacing: 2 }}>SEC</span>
                         </div>
                         <div style={{ display: "flex", gap: 16 }}>
@@ -636,7 +636,7 @@ export const AdminDashboard = ({ teams, setTeams, eventState, setEventState }) =
                 <div style={{ position: "absolute", width: "95%", height: "95%", borderTop: isLive ? "2px solid #D4AF37" : "2px solid rgba(255,255,255,0.1)", borderRadius: "50%" }} className="animate-spin-slow" />
                 <div style={{ position: "absolute", width: "88%", height: "88%", borderBottom: isDanger ? "4px solid #ff2a2a" : isLive ? "4px solid #D4AF37" : "4px dashed rgba(255,255,255,0.1)", borderRadius: "50%", opacity: 0.5 }} className="animate-spin-reverse" />
                 <div style={{ position: "absolute", width: "80%", height: "80%", background: "radial-gradient(circle, rgba(10,5,20,0.9) 0%, rgba(3,3,5,0.9) 100%)", borderRadius: "50%", border: "1px solid rgba(212, 175, 55, 0.3)", boxShadow: isLive ? "inset 0 0 50px rgba(212,175,55,0.1)" : "none" }} />
-                
+
                 <div style={{ position: "relative", zIndex: 10, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
                   {isLive ? (
                     <>
@@ -687,7 +687,7 @@ export const AdminDashboard = ({ teams, setTeams, eventState, setEventState }) =
                 ))}
                 {sortedTeams.length === 0 && <div style={{ color: "#718096", textAlign: "center", padding: 40, letterSpacing: 2, fontSize: 12 }}>NO SIGNALS DETECTED</div>}
               </div>
-              
+
               <div className="imperial-glass imperial-panel custom-scrollbar" style={{ padding: 32, overflowY: "auto", display: "flex", flexDirection: "column", gap: 16 }}>
                 <div style={{ fontSize: 14, letterSpacing: 4, color: "#D4AF37", marginBottom: 16, borderBottom: "1px dashed rgba(212,175,55,0.2)", paddingBottom: 16 }}>THE ROSTER</div>
                 {teams.map((t) => (
@@ -699,7 +699,7 @@ export const AdminDashboard = ({ teams, setTeams, eventState, setEventState }) =
                       </span>
                     </div>
                     <div style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", letterSpacing: 1 }}>
-                      P1: {t.player1} <br/> P2: {t.player2}
+                      P1: {t.player1} <br /> P2: {t.player2}
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
                       {t.r1Link && <a href={t.r1Link} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: "var(--neon-cyan)", textDecoration: "none", letterSpacing: 1 }}>➔ VERIFY R1 CHAT SNAPSHOT</a>}
@@ -758,7 +758,7 @@ export const AdminDashboard = ({ teams, setTeams, eventState, setEventState }) =
       case "VAULT":
         return (
           <motion.div key="vault" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.5 }} style={{ flex: 1, display: "flex", flexDirection: "column", padding: "48px 64px", minHeight: 750 }}>
-             <ImageVaultSection />
+            <ImageVaultSection />
           </motion.div>
         );
 
@@ -770,7 +770,7 @@ export const AdminDashboard = ({ teams, setTeams, eventState, setEventState }) =
               <div style={{ fontFamily: "'Cinzel', serif", fontSize: 48, letterSpacing: 8, color: "#ff2a2a", textShadow: "0 0 20px rgba(255,42,42,0.5)" }}>SYSTEM OVERRIDES</div>
               <div style={{ fontSize: 14, letterSpacing: 8, color: "rgba(255,42,42,0.6)", marginTop: 16 }}>DANGER ZONE • IRREVERSIBLE PROTOCOLS</div>
             </div>
-            
+
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 32, width: "100%", maxWidth: 1000 }}>
               <div className="imperial-glass imperial-panel" style={{ padding: 48, textAlign: "center", border: "1px solid rgba(255,42,42,0.3)" }}>
                 <Power size={48} color="#ff2a2a" style={{ margin: "0 auto", marginBottom: 24 }} />

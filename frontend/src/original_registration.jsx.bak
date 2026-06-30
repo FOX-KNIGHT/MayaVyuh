@@ -1,0 +1,113 @@
+const RegistrationScreen = ({ onRegister }) => {
+  const [teamName, setTeamName] = useState("");
+  const [p1, setP1] = useState("");
+  const [p2, setP2] = useState("");
+  const [registering, setRegistering] = useState(false);
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    if (!teamName || !p1 || !p2) return;
+
+    setRegistering(true);
+    try {
+      const res = await fetch(`${API}/api/game/teams/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamName, player1: p1, player2: p2, role: "observer" })
+      });
+      const data = await res.json();
+
+      if (data.success && data.team) {
+        onRegister({
+          id: data.team._id,
+          name: data.team.name,
+          player1: data.team.observer,
+          player2: data.team.creator,
+          status: data.team.status,
+          round: data.team.round
+        });
+      } else {
+        alert(data.error || "Registration failed on server.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to connect to backend for registration.");
+    } finally {
+      setRegistering(false);
+    }
+  };
+
+  return (
+    <div className="fusion-bg" style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 20px" }}>
+      
+      {/* Top Architectural Accents */}
+      <div className="stagger-slide-up" style={{ display: "flex", alignItems: "center", gap: 32, marginBottom: 40, animationDelay: "0.1s" }}>
+        <div style={{ height: 1, width: 80, background: "linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.5))" }} />
+        <img src={gdgLogo} alt="GDG Logo" style={{ height: 48, filter: "drop-shadow(0 0 10px rgba(69, 162, 158, 0.4)) hue-rotate(160deg)" }} />
+        <div style={{ height: 1, width: 80, background: "linear-gradient(-90deg, transparent, rgba(212, 175, 55, 0.5))" }} />
+      </div>
+
+      <div className="fusion-monolith stagger-slide-up" style={{ width: "100%", maxWidth: 640, padding: "56px 64px", textAlign: "center", animationDelay: "0.3s" }}>
+        
+        {/* Monolith Header */}
+        <div style={{ marginBottom: 48 }}>
+          <div className="fusion-tech-text" style={{ fontSize: 11, letterSpacing: 8, textTransform: "uppercase", marginBottom: 16 }}>Project Mayavyuh</div>
+          <div className="fusion-gold-heading" style={{ fontSize: "3.5rem", lineHeight: 1.1 }}>THE RELIC</div>
+          <div className="fusion-tech-text" style={{ fontSize: 13, color: "rgba(69, 162, 158, 0.8)", marginTop: 12, letterSpacing: 4 }}>AWAITING UPLINK</div>
+        </div>
+
+        {/* Monolith Body */}
+        <form onSubmit={handleRegister} style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+          
+          <div className="fusion-input-container">
+            <Shield size={16} color="rgba(197, 198, 199, 0.4)" style={{ position: "absolute", top: 18, left: 20 }} />
+            <input
+              placeholder="HOUSE DESIGNATION"
+              value={teamName}
+              onChange={e => setTeamName(e.target.value.toUpperCase())}
+              required
+              className="fusion-input"
+            />
+          </div>
+
+          <div style={{ display: "flex", gap: 24 }}>
+            <div className="fusion-input-container" style={{ flex: 1 }}>
+              <User size={16} color="rgba(197, 198, 199, 0.4)" style={{ position: "absolute", top: 18, left: 20 }} />
+              <input
+                placeholder="OPERATIVE I"
+                value={p1}
+                onChange={e => setP1(e.target.value.toUpperCase())}
+                required
+                className="fusion-input"
+              />
+            </div>
+            
+            <div className="fusion-input-container" style={{ flex: 1 }}>
+              <User size={16} color="rgba(197, 198, 199, 0.4)" style={{ position: "absolute", top: 18, left: 20 }} />
+              <input
+                placeholder="OPERATIVE II"
+                value={p2}
+                onChange={e => setP2(e.target.value.toUpperCase())}
+                required
+                className="fusion-input"
+              />
+            </div>
+          </div>
+
+          <div style={{ marginTop: 24 }}>
+            <button type="submit" disabled={registering} className="btn-fusion" style={{ width: "100%", padding: "20px 0", fontSize: 15, display: "flex", justifyContent: "center", alignItems: "center", gap: 16 }}>
+              {registering ? "SYNCHRONIZING..." : "INITIALIZE PROTOCOL"} <Crosshair size={18} />
+            </button>
+          </div>
+        </form>
+
+      </div>
+      
+      {/* Bottom Architectural Accents */}
+      <div className="stagger-slide-up" style={{ marginTop: 40, fontSize: 10, color: "rgba(197, 198, 199, 0.3)", letterSpacing: 6, fontFamily: "'Space Grotesk', sans-serif", animationDelay: "0.6s" }}>
+        SECURE SECTOR // 2026
+      </div>
+    </div>
+  );
+};
+

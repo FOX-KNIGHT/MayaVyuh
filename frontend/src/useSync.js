@@ -65,7 +65,9 @@ export function broadcastEvent(eventType, payload = {}) {
 
 export function useEventListener(handler) {
   const handlerRef = useRef(handler);
-  handlerRef.current = handler;
+  useEffect(() => {
+    handlerRef.current = handler;
+  }, [handler]);
 
   useEffect(() => {
     const bc = getBroadcastChannel();
