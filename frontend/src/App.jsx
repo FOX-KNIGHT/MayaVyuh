@@ -983,6 +983,60 @@ const RoundDisplay = ({ playerLabel, targetImage, onComplete, roundLabel, storag
   const isTimeUp = timeLeft <= 0;
   const effectivelyEnded = isRoundEnded || isTimeUp;
 
+  const [timeWarning, setTimeWarning] = useState(null);
+  const [isSubmitted, setIsSubmitted] = useState(() => {
+    try {
+      return localStorage.getItem(`maya_submitted_${teamId}_${storageKey}`) === "true";
+    } catch { return false; }
+  });
+  const [submittedLink, setSubmittedLink] = useState(() => {
+    try {
+      return localStorage.getItem(`maya_sublink_${teamId}_${storageKey}`) || "";
+    } catch { return ""; }
+  });
+
+  useEffect(() => {
+    if (timeLeft === 30) {
+      setTimeWarning("⏳ 30 SECONDS REMAINING! PREPARE AND SELECT YOUR IMAGE TO SUBMIT!");
+    } else if (timeLeft === 15) {
+      setTimeWarning("⏳ 15 SECONDS REMAINING! ALMOST TIME UP, SELECT YOUR IMAGE NOW!");
+    } else if (timeLeft === 10) {
+      setTimeWarning("⚠️ 10 SECONDS REMAINING! FINAL SECONDS! SUBMIT YOUR IMAGE IMMEDIATELY!");
+    }
+  }, [timeLeft]);
+
+  useEffect(() => {
+    if (timeWarning) {
+      const timer = setTimeout(() => setTimeWarning(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [timeWarning]);
+
+  useEffect(() => {
+    if (!effectivelyEnded && !isPaused) {
+      const handleBeforeUnload = (e) => {
+        e.preventDefault();
+        e.returnValue = "An active round is running! Leaving now is prohibited.";
+        return e.returnValue;
+      };
+      window.addEventListener("beforeunload", handleBeforeUnload);
+      return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+    }
+  }, [effectivelyEnded, isPaused]);
+
+  useEffect(() => {
+    if (effectivelyEnded && isSubmitted && uploadedImgUrl) {
+      const linkToUse = submittedLink || geminiLink || savedSessionLink;
+      onComplete(uploadedImgUrl, linkToUse);
+    }
+  }, [effectivelyEnded, isSubmitted, uploadedImgUrl, submittedLink, geminiLink, savedSessionLink, onComplete]);
+
+  const warningBanner = timeWarning ? (
+    <motion.div initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} style={{ position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", background: "linear-gradient(90deg, rgba(255,0,85,0.95), rgba(212,175,55,0.95))", padding: "14px 36px", borderRadius: 8, border: "2px solid #FFDF73", color: "#fff", fontFamily: "'Orbitron'", fontSize: 16, fontWeight: "bold", zIndex: 99999, boxShadow: "0 0 40px rgba(255,0,85,0.9)", textAlign: "center", pointerEvents: "none" }}>
+      {timeWarning}
+    </motion.div>
+  ) : null;
+
   useEffect(() => {
     if (isPaused) setIsGeminiLaunched(false);
   }, [isPaused]);
@@ -1040,7 +1094,16 @@ const RoundDisplay = ({ playerLabel, targetImage, onComplete, roundLabel, storag
         alert("LOCK REJECTED: " + (data.error || "Verification failed."));
         return;
       }
-      onComplete(uploadedImgUrl, linkToVerify);
+      try {
+        localStorage.setItem(`maya_submitted_${teamId}_${storageKey}`, "true");
+        localStorage.setItem(`maya_sublink_${teamId}_${storageKey}`, linkToVerify);
+        if (uploadedImgUrl) localStorage.setItem(`maya_subimg_${teamId}_${storageKey}`, uploadedImgUrl);
+      } catch (e) {}
+      setIsSubmitted(true);
+      setSubmittedLink(linkToVerify);
+      if (effectivelyEnded) {
+        onComplete(uploadedImgUrl, linkToVerify);
+      }
     } catch (err) {
       alert("Error verifying the Gemini link.");
     } finally {
@@ -1048,9 +1111,46 @@ const RoundDisplay = ({ playerLabel, targetImage, onComplete, roundLabel, storag
     }
   };
 
+  if (isSubmitted && !effectivelyEnded) {
+    return (
+      <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="chat-layout" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", width: "100%", padding: 40, zIndex: 1, position: "relative" }}>
+        {warningBanner}
+        <div className="glass-panel" style={{ width: "100%", maxWidth: 700, textAlign: "center", padding: 48, border: "1px solid var(--neon-green)", background: "rgba(0, 20, 10, 0.7)", boxShadow: "0 0 40px rgba(0, 255, 136, 0.2)" }}>
+          <div style={{ fontSize: 64, marginBottom: 20 }}>🛡️</div>
+          <div className="title-primary" style={{ color: "var(--neon-green)", marginBottom: 16 }}>SPELL SEALED & SUBMITTED!</div>
+          <div style={{ fontFamily: "'Share Tech Mono'", fontSize: 16, color: "#fff", marginBottom: 32, lineHeight: 1.6 }}>
+            YOUR ARTIFACT HAS BEEN TRANSMITTED TO THE DATACRON.<br/>
+            <strong>SECURITY PROTOCOL ACTIVE:</strong> YOU CANNOT LEAVE THIS TERMINAL UNTIL THE ROUND EXPIRES.
+          </div>
+          
+          <div style={{ background: "rgba(0,0,0,0.6)", padding: 24, borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", marginBottom: 32 }}>
+            <div style={{ fontSize: 12, color: "var(--text-dim)", letterSpacing: 4, marginBottom: 8 }}>ROUND TIME REMAINING</div>
+            <div style={{ fontSize: 48, fontFamily: "'Orbitron'", color: "var(--neon-gold)", textShadow: "0 0 15px rgba(212,175,55,0.5)" }}>
+              {fmtTime(timeLeft)}
+            </div>
+            <div style={{ fontSize: 11, color: "var(--neon-cyan)", letterSpacing: 2, marginTop: 8 }}>
+              AUTOMATIC PHASE TRANSITION WHEN TIMER REACHES 00:00
+            </div>
+          </div>
+
+          <button className="btn-imperial-danger" style={{ padding: "12px 24px", fontSize: 12 }} onClick={() => {
+            setIsSubmitted(false);
+            try {
+              localStorage.removeItem(`maya_submitted_${teamId}_${storageKey}`);
+              localStorage.removeItem(`maya_sublink_${teamId}_${storageKey}`);
+            } catch (e) {}
+          }}>
+            MODIFY SUBMISSION
+          </button>
+        </div>
+      </motion.div>
+    );
+  }
+
   if (isGeminiLaunched) {
     return (
       <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="ac-protected-content" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', width: "50vw", padding: "32px 40px", boxSizing: "border-box", position: "relative", zIndex: 1 }}>
+        {warningBanner}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 32 }}>
           <div style={{ fontSize: 40, fontFamily: "'Orbitron'", color: (isPaused || effectivelyEnded) ? "#ff2a2a" : "#D4AF37", textShadow: `0 0 10px ${(isPaused || effectivelyEnded) ? 'rgba(255,42,42,0.5)' : 'rgba(212,175,55,0.5)'}`, letterSpacing: 2, marginTop: 4 }}>
             {(isPaused || effectivelyEnded) ? "00:00" : fmtTime(timeLeft)}
@@ -1116,6 +1216,7 @@ const RoundDisplay = ({ playerLabel, targetImage, onComplete, roundLabel, storag
 
   return (
     <motion.div layout className="chat-layout" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+      {warningBanner}
       <div className="chat-sidebar">
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
           <img src={gdgLogo} alt="GDG Logo" style={{ width: 40 }} />
@@ -1177,13 +1278,32 @@ const SelectionScreen = ({ imgR2, imgR3, onSelect }) => (
   </div>
 );
 
-const JudgmentScreen = ({ originalImg, finalImg, score }) => {
+const JudgmentScreen = ({ originalImg, finalImg, score, onRedirect }) => {
+  const [countdown, setCountdown] = useState(60);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          if (onRedirect) onRedirect();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [onRedirect]);
+
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 40, position: "relative", zIndex: 1 }}>
       <img src={gdgLogo} alt="GDG Logo" style={{ width: 80, marginBottom: 20 }} />
       <div className="title-primary" style={{ marginBottom: 20, color: "var(--neon-gold)", textShadow: "0 0 20px var(--neon-gold)", animation: "pulse 2s infinite" }}>SIMILARITY RESULTS</div>
-      <div style={{ fontFamily: "'Orbitron'", color: "var(--neon-cyan)", fontSize: 24, marginBottom: 40, letterSpacing: 4 }}>
+      <div style={{ fontFamily: "'Orbitron'", color: "var(--neon-cyan)", fontSize: 24, marginBottom: 16, letterSpacing: 4 }}>
         AWAITING FINAL VERDICT
+      </div>
+      <div style={{ fontFamily: "'Share Tech Mono'", color: "var(--neon-gold)", fontSize: 16, marginBottom: 40, letterSpacing: 2, background: "rgba(0,0,0,0.6)", padding: "8px 20px", borderRadius: 4, border: "1px solid rgba(212,175,55,0.4)" }}>
+        AUTOMATIC REDIRECT TO LEADERBOARD IN: <span style={{ color: "#fff", fontWeight: "bold" }}>{countdown}s</span>
       </div>
 
       <div style={{ display: "flex", gap: 60, alignItems: "center", width: "100%", maxWidth: 1200, perspective: 1000 }}>
@@ -1390,6 +1510,9 @@ const PlayerSection = ({ globalTeams, setGlobalTeams }) => {
       localStorage.removeItem("maya_r3Img");
       localStorage.removeItem("maya_finalImg");
       localStorage.removeItem("maya_score");
+      Object.keys(localStorage).forEach(k => {
+        if (k.startsWith("maya_submitted_") || k.startsWith("maya_sublink_") || k.startsWith("maya_subimg_")) localStorage.removeItem(k);
+      });
       window.location.reload();
     }
   });
@@ -1457,7 +1580,7 @@ const PlayerSection = ({ globalTeams, setGlobalTeams }) => {
       updateTeamStatus({ round: 3, score: 0, finalImage: img });
     }
   }} />;
-  if (phase === "judgment") return <JudgmentScreen originalImg={targetImage} finalImg={finalImg} score={score} />;
+  if (phase === "judgment") return <JudgmentScreen originalImg={targetImage} finalImg={finalImg} score={score} onRedirect={() => setPhase("leaderboard")} />;
   if (phase === "leaderboard") return <LeaderboardRedirect teams={globalTeams} />;
 
   return null;
